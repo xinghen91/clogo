@@ -8,49 +8,42 @@
 #include <math.h>
 
 void clogo_test(
-  struct clogo_options *opts
+  struct clogo_options *opt
 )
 {
-//Set up initial space
-struct space space;
-init_space(&space);
+//Set up initial state
+struct cl_state state;
+init_state(&state, opt);
 
-//Create topmost node
-struct node *top = create_top_node(opts);
-
-//Put the topmost node on top
-add_node_to_space(top, &space);
-
-int n = 0;
-while (n < opts->max && space_error(&space, opts) >= opts->epsilon) {
-  select_nodes(&space, opts, &n);
+while (state.samples < opt->max && 
+       state_error(&state) >= opt->epsilon) {
+  select_nodes(&state);
   printf("  Best: ");
-  dbg_print_node(space_best_node(&space));
+  dbg_print_node(space_best_node(&state.space));
 }
-printf("Final Best (n=%d): ", n);
-dbg_print_node(space_best_node(&space));
-printf("Error: %e\n", space_error(&space, opts));
+printf("Final Best (n=%d): ", state.samples);
+dbg_print_node(space_best_node(&state.space));
+printf("Error: %e\n", state_error(&state));
 
 } /* clogo_test() */
 
 
 void select_nodes(
-  struct space *s, 
-  struct clogo_options *opt,
-  int *sample_cnt
+  struct cl_state *state
 )
 {
+const struct clogo_options *opt = state->opt;
+struct space *space = &state->space;
 double prev_best = -INFINITY;
-int kmax = (int)((*opt->hmax)(*sample_cnt)/opt->w);
+int kmax = (int)((*opt->hmax)(state->samples)/opt->w);
 
-printf("Selecting (n=%d, kmax=%d):\n", *sample_cnt, kmax);
+printf("Selecting (n=%d, kmax=%d):\n", state->samples, kmax);
 for (int k = 0; k <= kmax; k++) {
   struct node *best = NULL;
   int h_min = k*opt->w;
   int h_max = (k+1)*opt->w-1;
   for (int h = h_min; h <= h_max; h++) {
-    if (h >= s->capacity) continue;
-    struct node *h_best = list_best_node(&s->depth[h]);
+    struct node *h_best = depth_best_node(space, h);
     if (h_best == NULL) continue;
     if (best == NULL || h_best->value > best->value) {
       best = h_best; 
@@ -63,10 +56,10 @@ for (int k = 0; k <= kmax; k++) {
     } else {
       printf("  Depth %d: ", best->depth);
     }
-    expand_node(best, s, opt, sample_cnt);
+    expand_node(best, state);
     dbg_print_node(best);
     //Check termination conditions
-    if (*sample_cnt >= opt->max) return;
+    if (state->samples >= opt->max) return;
     if (opt->optimum - best->value < opt->epsilon) return;
   }
 }
@@ -75,13 +68,11 @@ for (int k = 0; k <= kmax; k++) {
 
 
 struct node * list_best_node(
-  struct node_list *l
+  const struct node_list *l
 )
 {
-struct node *best = l->first;
 struct node *n = l->first;
-
-if (best == NULL) return NULL;
+struct node *best = n;
 
 while (n != NULL) {
   if (n->value > best->value) {
@@ -96,12 +87,12 @@ return best;
 
 
 struct node * space_best_node(
-  struct space *s
+  const struct space *s
 )
 {
 struct node *best = NULL;
 for (int h = 0; h < s->capacity; h++) {
-  struct node *b = list_best_node(&s->depth[h]);  
+  struct node *b = depth_best_node(s, h);  
   if (b == NULL) continue;
   if (best == NULL || b->value > best->value) best = b;
 }
@@ -111,17 +102,31 @@ return best;
 } /* space_best_node() */
 
 
-double space_error(
-  struct space *s, 
-  struct clogo_options *opts
+struct node * depth_best_node(
+  const struct space *s, 
+  int h
+) 
+{
+if (h < s->capacity) {
+  return list_best_node(&s->depth[h]);
+} else {
+  return NULL;
+}
+
+} /* depth_best_node() */
+
+
+double state_error(
+  const struct cl_state *state
 )
 {
-struct node *space_best = space_best_node(s);
+const struct clogo_options *opt = state->opt;
+struct node *space_best = space_best_node(&state->space);
 double error;
-if (opts->optimum == 0.0) {
-  error = opts->optimum-space_best->value;
+if (opt->optimum == 0.0) {
+  error = opt->optimum-space_best->value;
 } else {
-  error = opts->optimum - space_best->value/opts->optimum;
+  error = opt->optimum - space_best->value/opt->optimum;
 }
 return error;
 
@@ -130,18 +135,18 @@ return error;
 
 void expand_node(
   struct node *n, 
-  struct space *s, 
-  struct clogo_options *opt,
-  int *sample_cnt
+  struct cl_state *state
 )
 {
-remove_node_from_space(n, s);
+struct space *space = &state->space;
+const struct clogo_options *opt = state->opt;
+remove_node_from_space(n, space);
 int split_dim = n->depth%DIM;
 
 assert(opt->k % 2 == 1);
-for (int i = 0; i < opt->k && *sample_cnt < opt->max; i++) {
-  struct node *child = create_child_node(n, opt, split_dim, i, sample_cnt);
-  add_node_to_space(child, s);
+for (int i = 0; i < opt->k && state->samples < opt->max; i++) {
+  struct node *child = create_child_node(n, state, split_dim, i);
+  add_node_to_space(child, space);
 }
 
 free(n);
@@ -162,6 +167,25 @@ for (int i = 0; i < s->capacity; i++) {
 } /* init_space() */
 
 
+void init_state(
+  struct cl_state *state,
+  const struct clogo_options *opt
+)
+{
+//Assign options
+state->opt = opt;
+
+//Reset sample count
+state->samples = 0;
+
+//Create input space and create topmost node
+init_space(&state->space);
+struct node *top = create_top_node(opt);
+add_node_to_space(top, &state->space);
+
+} /* init_state() */
+
+
 void init_node_list(
   struct node_list *l
 )
@@ -172,7 +196,7 @@ l->first = NULL;
 
 
 struct node * create_top_node(
-    struct clogo_options *opts
+    const struct clogo_options *opt
 )
 {
 struct node *n = malloc(sizeof(*n));
@@ -184,7 +208,7 @@ for (int i = 0; i < DIM; i++) {
 
 n->depth = 0;
 n->next = NULL;
-sample_node(n, opts);
+sample_node(n, opt);
 
 return n;
 
@@ -193,12 +217,12 @@ return n;
 
 struct node * create_child_node(
   struct node *parent, 
-  struct clogo_options *opt,
+  struct cl_state *state,
   int split_dim,
-  int idx,
-  int *sample_cnt
+  int idx
 )
 {
+const struct clogo_options *opt = state->opt;
 int splits = opt->k;
 struct node *n = malloc(sizeof(*n));
 double width = parent->sizes[split_dim] / splits;
@@ -220,7 +244,7 @@ if (idx == opt->k/2) {
   n->value = parent->value;
 } else {
   sample_node(n, opt);
-  (*sample_cnt)++;
+  state->samples++;
 }
 
 return n;
@@ -311,7 +335,7 @@ s->capacity = new_capacity;
 
 void sample_node(
   struct node *n, 
-  struct clogo_options *opt
+  const struct clogo_options *opt
 )
 {
 double center[DIM];
