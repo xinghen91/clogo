@@ -15,7 +15,7 @@ struct input_space space;
 init_space(&space);
 
 //Create topmost node
-struct node *top = create_top_node();
+struct node *top = create_top_node(opts);
 
 //Put the topmost node on top
 add_node_to_space(top, &space);
@@ -39,7 +39,7 @@ remove_node_from_space(n, s);
 int split_dim = n->depth%DIM;
 
 for (int i = 0; i < opt->k; i++) {
-  struct node *child = create_child_node(n, opt->k, split_dim, i);
+  struct node *child = create_child_node(n, opt, split_dim, i);
   add_node_to_space(child, s);
 }
 
@@ -69,7 +69,7 @@ l->first = NULL;
 
 
 struct node * create_top_node(
-  void
+    struct clogo_options *opts
 )
 {
 struct node *n = malloc(sizeof(*n));
@@ -78,8 +78,10 @@ for (int i = 0; i < DIM; i++) {
   n->edges[i] = 0.0;
   n->sizes[i] = 1.0;
 }
+
 n->depth = 0;
 n->next = NULL;
+sample_node(n, opts);
 
 return n;
 
@@ -88,11 +90,12 @@ return n;
 
 struct node * create_child_node(
   struct node *parent, 
-  int splits,
+  struct clogo_options *opt,
   int split_dim,
   int idx
 )
 {
+int splits = opt->k;
 struct node *n = malloc(sizeof(*n));
 double width = parent->sizes[split_dim] / splits;
 
@@ -108,6 +111,7 @@ for (int i = 0; i < DIM; i++) {
 
 n->depth = parent->depth+1;
 n->next = NULL;
+sample_node(n, opt);
 
 return n;
 
@@ -193,3 +197,27 @@ s->depth_lists = new_lists;
 s->capacity = new_capacity;
 
 } /* grow_space() */
+
+
+void sample_node(
+  struct node *n, 
+  struct clogo_options *opt
+)
+{
+double center[DIM];
+calculate_center(n, center);
+n->value = (*opt->fn)(center);
+
+} /* sample_node() */
+
+
+void calculate_center(
+  struct node *n, 
+  double *center
+)
+{
+for (int i = 0; i < DIM; i++) {
+  center[i] = n->edges[i] + n->sizes[i]/2.0;
+}
+
+} /* calculate_center() */

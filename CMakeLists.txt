@@ -10,7 +10,7 @@ set( PROJ_INCLUDES "${CMAKE_SOURCE_DIR}/include" )
 
 project( ${PROJ_NAME} )
 
-set( CMAKE_C_FLAGS "-std=c11 -Wall" )
+set( CMAKE_C_FLAGS "-std=c11 -Wall -lm" )
 set( CMAKE_C_FLAGS_RELEASE "-O3" )
 set( CMAKE_C_FLAGS_DEBUG "-gdwarf-3" )
 

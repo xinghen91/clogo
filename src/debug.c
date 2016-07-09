@@ -7,9 +7,12 @@ void dbg_print_node(
   struct node *n
 ) 
 {
+double center[DIM];
+calculate_center(n, center);
+
 printf(
   "%f/%f\t%f/%f\t%f\n", 
-  n->edges[0], n->edges[1],
+  center[0], center[1],
   n->sizes[0], n->sizes[1],
   n->value
 );
