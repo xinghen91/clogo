@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <math.h>
 
 void clogo_test(
   struct clogo_options *opts
@@ -20,26 +21,94 @@ struct node *top = create_top_node(opts);
 //Put the topmost node on top
 add_node_to_space(top, &space);
 
-
-//Expand node
-dbg_print_space(&space);
-expand_node(top, &space, opts);
-dbg_print_space(&space);
+int n = 0;
+while (n < opts->max) {
+  select_nodes(&space, opts, &n);
+  printf("  Best: ");
+  dbg_print_node(space_best_node(&space));
+}
+printf("Final Best (n=%d): ", n);
+dbg_print_node(space_best_node(&space));
 
 } /* clogo_test() */
+
+
+void select_nodes(
+  struct input_space *s, 
+  struct clogo_options *opt,
+  int *sample_cnt
+)
+{
+double prev_best = -INFINITY;
+int hmax = (int)(*opt->hmax)(*sample_cnt);
+
+printf("Selecting (n=%d, hmax=%d):\n", *sample_cnt, hmax);
+for (int h = 0; h <= hmax; h++) {
+  if (h > s->capacity) continue;
+  struct node *best = list_best_node(&s->depth[h]);
+  if (best != NULL && best->value > prev_best) {
+    prev_best = best->value;
+    printf("  Depth %d: ", h);
+    expand_node(best, s, opt, sample_cnt);
+    dbg_print_node(best);
+    //TODO: Calculate best, check termination condition
+    if (*sample_cnt >= opt->max) return;
+  }
+}
+
+} /* select_nodes() */
+
+
+struct node * list_best_node(
+  struct node_list *l
+)
+{
+struct node *best = l->first;
+struct node *n = l->first;
+
+if (best == NULL) return NULL;
+
+while (n != NULL) {
+  if (n->value > best->value) {
+    best = n;
+  }
+  n = n->next;
+}
+
+return best;
+
+} /* list_best_node() */
+
+
+struct node * space_best_node(
+  struct input_space *s
+)
+{
+struct node *best = NULL;
+for (int h = 0; h < s->capacity; h++) {
+  struct node *b = list_best_node(&s->depth[h]);  
+  if (b == NULL) continue;
+  if (best == NULL || b->value > best->value) best = b;
+}
+
+return best;
+
+} /* space_best_node() */
 
 
 void expand_node(
   struct node *n, 
   struct input_space *s, 
-  struct clogo_options *opt
+  struct clogo_options *opt,
+  int *sample_cnt
 )
 {
 remove_node_from_space(n, s);
 int split_dim = n->depth%DIM;
 
+assert(opt->k % 2 == 1);
 for (int i = 0; i < opt->k; i++) {
-  struct node *child = create_child_node(n, opt, split_dim, i);
+  struct node *child = create_child_node(n, opt, split_dim, i, sample_cnt);
   add_node_to_space(child, s);
 }
 
@@ -51,9 +120,9 @@ void init_space(
 )
 {
 s->capacity = 1;
-s->depth_lists = malloc(sizeof(*s->depth_lists)*s->capacity);
+s->depth = malloc(sizeof(*s->depth)*s->capacity);
 for (int i = 0; i < s->capacity; i++) {
-  init_node_list(&s->depth_lists[i]);
+  init_node_list(&s->depth[i]);
 }
 
 } /* init_space() */
@@ -92,7 +161,8 @@ struct node * create_child_node(
   struct node *parent, 
   struct clogo_options *opt,
   int split_dim,
-  int idx
+  int idx,
+  int *sample_cnt
 )
 {
 int splits = opt->k;
@@ -111,7 +181,13 @@ for (int i = 0; i < DIM; i++) {
 
 n->depth = parent->depth+1;
 n->next = NULL;
-sample_node(n, opt);
+
+if (idx == opt->k/2) {
+  n->value = parent->value;
+} else {
+  sample_node(n, opt);
+  (*sample_cnt)++;
+}
 
 return n;
 
@@ -135,7 +211,7 @@ void add_node_to_space(
 )
 {
 while (s->capacity <= n->depth) grow_space(s);
-struct node_list *list = &s->depth_lists[n->depth];
+struct node_list *list = &s->depth[n->depth];
 add_node_to_list(n, list);
 
 } /* add_node_to_space() */
@@ -174,7 +250,7 @@ void remove_node_from_space(
 )
 {
 assert(n->depth < s->capacity);
-struct node_list *l = &s->depth_lists[n->depth];
+struct node_list *l = &s->depth[n->depth];
 remove_node_from_list(n, l);
 
 } /* remove_node_from_space() */
@@ -187,13 +263,13 @@ void grow_space(
 int new_capacity = s->capacity*2;
 struct node_list *new_lists = malloc(sizeof(*new_lists)*new_capacity);
 for (int i = 0; i < s->capacity; i++) {
-  new_lists[i] = s->depth_lists[i];
+  new_lists[i] = s->depth[i];
 }
 for (int i = s->capacity; i < new_capacity; i++) {
   init_node_list(&new_lists[i]);
 }
-free(s->depth_lists);
-s->depth_lists = new_lists;
+free(s->depth);
+s->depth = new_lists;
 s->capacity = new_capacity;
 
 } /* grow_space() */
