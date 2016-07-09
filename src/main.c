@@ -6,7 +6,10 @@
 double fn(double *i) 
 {
   double x = i[0], y = i[1];
-  return sin(4.0*(x+0.5*y))-x*x-y*y;
+  x = -5.0 + x*(10.0+5.0);
+  y = -5.0 + y*(10.0+5.0);
+  //return sin(4.0*(x+0.5*y))-x*x-y*y;
+  return -(100.0*pow(y-x*x, 2.0)+pow(x*x-1.0, 2.0));
 }
 
 double hmax(int n)
@@ -16,8 +19,9 @@ double hmax(int n)
 
 int main() {
   struct clogo_options opt = { 
-    .max = 200,
+    .max = 600,
     .k = 3,
+    .w = 1,
     .fn = &fn,
     .hmax = &hmax,
   };

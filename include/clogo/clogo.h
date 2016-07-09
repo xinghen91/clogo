@@ -5,6 +5,7 @@
 struct clogo_options {
   int max;
   int k;
+  int w;
   double (*fn)(double *);
   double (*hmax)(int);
 };

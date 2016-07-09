@@ -40,15 +40,24 @@ void select_nodes(
 )
 {
 double prev_best = -INFINITY;
-int hmax = (int)(*opt->hmax)(*sample_cnt);
+int kmax = (int)((*opt->hmax)(*sample_cnt)/opt->w);
 
-printf("Selecting (n=%d, hmax=%d):\n", *sample_cnt, hmax);
-for (int h = 0; h <= hmax; h++) {
-  if (h > s->capacity) continue;
-  struct node *best = list_best_node(&s->depth[h]);
+printf("Selecting (n=%d, kmax=%d):\n", *sample_cnt, kmax);
+for (int k = 0; k <= kmax; k++) {
+  struct node *best = NULL;
+  int h_min = k*opt->w;
+  int h_max = (k+1)*opt->w-1;
+  for (int h = h_min; h <= h_max; h++) {
+    if (h >= s->capacity) continue;
+    struct node *h_best = list_best_node(&s->depth[h]);
+    if (h_best == NULL) continue;
+    if (best == NULL || h_best->value > best->value) {
+      best = h_best; 
+    }
+  }
   if (best != NULL && best->value > prev_best) {
     prev_best = best->value;
-    printf("  Depth %d: ", h);
+    printf("  Depth %d-%d (%d): ", h_min, h_max, best->depth);
     expand_node(best, s, opt, sample_cnt);
     dbg_print_node(best);
     //TODO: Calculate best, check termination condition
@@ -107,10 +116,12 @@ remove_node_from_space(n, s);
 int split_dim = n->depth%DIM;
 
 assert(opt->k % 2 == 1);
-for (int i = 0; i < opt->k; i++) {
+for (int i = 0; i < opt->k && *sample_cnt < opt->max; i++) {
   struct node *child = create_child_node(n, opt, split_dim, i, sample_cnt);
   add_node_to_space(child, s);
 }
+
+free(n);
 
 } /* expand_node() */
 
