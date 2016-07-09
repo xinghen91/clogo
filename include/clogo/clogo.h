@@ -8,6 +8,8 @@ struct clogo_options {
   int w;
   double (*fn)(double *);
   double (*hmax)(int);
+  double epsilon;
+  double optimum;
 };
 
 struct node {
@@ -34,6 +36,7 @@ void select_nodes(struct input_space *i,
                   int *n);
 struct node * list_best_node(struct node_list *l);
 struct node * space_best_node(struct input_space *s);
+double space_error(struct input_space *s, struct clogo_options *opts);
 void expand_node(struct node *n, 
                  struct input_space *s, 
                  struct clogo_options *opt,

@@ -22,13 +22,14 @@ struct node *top = create_top_node(opts);
 add_node_to_space(top, &space);
 
 int n = 0;
-while (n < opts->max) {
+while (n < opts->max && space_error(&space, opts) >= opts->epsilon) {
   select_nodes(&space, opts, &n);
   printf("  Best: ");
   dbg_print_node(space_best_node(&space));
 }
 printf("Final Best (n=%d): ", n);
 dbg_print_node(space_best_node(&space));
+printf("Error: %e\n", space_error(&space, opts));
 
 } /* clogo_test() */
 
@@ -57,11 +58,16 @@ for (int k = 0; k <= kmax; k++) {
   }
   if (best != NULL && best->value > prev_best) {
     prev_best = best->value;
-    printf("  Depth %d-%d (%d): ", h_min, h_max, best->depth);
+    if (h_min != h_max) {
+      printf("  Depth %d-%d (%d): ", h_min, h_max, best->depth);
+    } else {
+      printf("  Depth %d: ", best->depth);
+    }
     expand_node(best, s, opt, sample_cnt);
     dbg_print_node(best);
-    //TODO: Calculate best, check termination condition
+    //Check termination conditions
     if (*sample_cnt >= opt->max) return;
+    if (opt->optimum - best->value < opt->epsilon) return;
   }
 }
 
@@ -103,6 +109,23 @@ for (int h = 0; h < s->capacity; h++) {
 return best;
 
 } /* space_best_node() */
+
+
+double space_error(
+  struct input_space *s, 
+  struct clogo_options *opts
+)
+{
+struct node *space_best = space_best_node(s);
+double error;
+if (opts->optimum == 0.0) {
+  error = opts->optimum-space_best->value;
+} else {
+  error = opts->optimum - space_best->value/opts->optimum;
+}
+return error;
+
+} /* space_error() */
 
 
 void expand_node(
