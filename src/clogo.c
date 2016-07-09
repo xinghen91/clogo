@@ -12,7 +12,7 @@ void clogo_test(
 )
 {
 //Set up initial space
-struct input_space space;
+struct space space;
 init_space(&space);
 
 //Create topmost node
@@ -35,7 +35,7 @@ printf("Error: %e\n", space_error(&space, opts));
 
 
 void select_nodes(
-  struct input_space *s, 
+  struct space *s, 
   struct clogo_options *opt,
   int *sample_cnt
 )
@@ -96,7 +96,7 @@ return best;
 
 
 struct node * space_best_node(
-  struct input_space *s
+  struct space *s
 )
 {
 struct node *best = NULL;
@@ -112,7 +112,7 @@ return best;
 
 
 double space_error(
-  struct input_space *s, 
+  struct space *s, 
   struct clogo_options *opts
 )
 {
@@ -130,7 +130,7 @@ return error;
 
 void expand_node(
   struct node *n, 
-  struct input_space *s, 
+  struct space *s, 
   struct clogo_options *opt,
   int *sample_cnt
 )
@@ -150,7 +150,7 @@ free(n);
 
 
 void init_space(
-  struct input_space *s
+  struct space *s
 )
 {
 s->capacity = 1;
@@ -241,7 +241,7 @@ l->first = n;
 
 void add_node_to_space(
   struct node *n, 
-  struct input_space *s
+  struct space *s
 )
 {
 while (s->capacity <= n->depth) grow_space(s);
@@ -280,7 +280,7 @@ assert(false);
 
 void remove_node_from_space(
   struct node *n, 
-  struct input_space *s
+  struct space *s
 )
 {
 assert(n->depth < s->capacity);
@@ -291,7 +291,7 @@ remove_node_from_list(n, l);
 
 
 void grow_space(
-  struct input_space *s
+  struct space *s
 )
 {
 int new_capacity = s->capacity*2;

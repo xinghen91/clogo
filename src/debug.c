@@ -11,7 +11,7 @@ double center[DIM];
 calculate_center(n, center);
 
 printf(
-  "%f/%f\t%e/%e\t%e\n", 
+  "%f/%f\t%e/%e\t%f\n", 
   center[0], center[1],
   n->sizes[0], n->sizes[1],
   n->value
@@ -33,7 +33,7 @@ do {
 
 
 void dbg_print_space(
-  struct input_space *s
+  struct space *s
 ) 
 {
 printf("=====\n");
