@@ -8,7 +8,7 @@
 #include <math.h>
 
 void clogo_test(
-  struct clogo_options *opt
+  const struct clogo_options *opt
 )
 {
 //Set up initial state
@@ -56,7 +56,7 @@ for (int k = 0; k <= kmax; k++) {
     } else {
       printf("  Depth %d: ", best->depth);
     }
-    expand_node(best, state);
+    expand_and_remove_node(best, state);
     dbg_print_node(best);
     //Check termination conditions
     if (state->samples >= opt->max) return;
@@ -133,7 +133,7 @@ return error;
 } /* space_error() */
 
 
-void expand_node(
+void expand_and_remove_node(
   struct node *n, 
   struct cl_state *state
 )
@@ -151,7 +151,7 @@ for (int i = 0; i < opt->k && state->samples < opt->max; i++) {
 
 free(n);
 
-} /* expand_node() */
+} /* expand_and_remove_node() */
 
 
 void init_space(
@@ -216,7 +216,7 @@ return n;
 
 
 struct node * create_child_node(
-  struct node *parent, 
+  const struct node *parent, 
   struct cl_state *state,
   int split_dim,
   int idx
@@ -276,7 +276,7 @@ add_node_to_list(n, list);
 
 
 void remove_node_from_list(
-  struct node *n, 
+  const struct node *n, 
   struct node_list *l
 )
 {
@@ -303,7 +303,7 @@ assert(false);
 
 
 void remove_node_from_space(
-  struct node *n, 
+  const struct node *n, 
   struct space *s
 )
 {
@@ -346,7 +346,7 @@ n->value = (*opt->fn)(center);
 
 
 void calculate_center(
-  struct node *n, 
+  const struct node *n, 
   double *center
 )
 {
