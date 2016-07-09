@@ -3,6 +3,7 @@
 #include "clogo/clogo.h"
 
 int main() {
-  printf("Hi! %d\n", clogo_test());
+  struct clogo_options opt = { .k = 3 };
+  clogo_test(&opt);
   return 0;
 }

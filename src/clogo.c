@@ -1,6 +1,8 @@
 #include "clogo/clogo.h"
 
-int clogo_test()
+#include <stdio.h>
+
+void clogo_test(struct clogo_options *opts)
 {
-  return 37;
+  printf("%d\n", opts->k);
 }
