@@ -2,14 +2,17 @@
 
 #define DIM 2
 
+struct cl_state;
+
 struct clogo_options {
   int max;
   int k;
-  int w;
   double (*fn)(double *);
   double (*hmax)(int);
+  int (*w_schedule)(const struct cl_state *);
+  int init_w;
   double epsilon;
-  double optimum;
+  double fn_optimum;
 };
 
 struct node {
@@ -34,6 +37,8 @@ struct cl_state {
   const struct clogo_options *opt;
   struct space space;
   int samples;
+  double last_best_value;
+  int w;
 };
 
 void clogo_test(const struct clogo_options *opt);
@@ -41,6 +46,7 @@ void select_nodes(struct cl_state *state);
 struct node * list_best_node(const struct node_list *l);
 struct node * space_best_node(const struct space *s);
 struct node * depth_best_node(const struct space *s, int h);
+double state_best_value(const struct cl_state *state);
 double state_error(const struct cl_state *state);
 void expand_and_remove_node(struct node *n, 
                  struct cl_state *state);

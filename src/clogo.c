@@ -19,7 +19,12 @@ while (state.samples < opt->max &&
        state_error(&state) >= opt->epsilon) {
   select_nodes(&state);
   printf("  Best: ");
-  dbg_print_node(space_best_node(&state.space));
+  struct node *best = space_best_node(&state.space);
+  dbg_print_node(best);
+  //Recalculate w according to the provided schedule
+  state.w = (*opt->w_schedule)(&state);
+  //Updated the best value seen so far
+  state.last_best_value = best->value;
 }
 printf("Final Best (n=%d): ", state.samples);
 dbg_print_node(space_best_node(&state.space));
@@ -35,13 +40,13 @@ void select_nodes(
 const struct clogo_options *opt = state->opt;
 struct space *space = &state->space;
 double prev_best = -INFINITY;
-int kmax = (int)((*opt->hmax)(state->samples)/opt->w);
+int kmax = (int)((*opt->hmax)(state->samples)/state->w);
 
-printf("Selecting (n=%d, kmax=%d):\n", state->samples, kmax);
+printf("Selecting (n=%d, w=%d, kmax=%d):\n", state->samples, state->w, kmax);
 for (int k = 0; k <= kmax; k++) {
   struct node *best = NULL;
-  int h_min = k*opt->w;
-  int h_max = (k+1)*opt->w-1;
+  int h_min = k*state->w;
+  int h_max = (k+1)*state->w-1;
   for (int h = h_min; h <= h_max; h++) {
     struct node *h_best = depth_best_node(space, h);
     if (h_best == NULL) continue;
@@ -60,7 +65,7 @@ for (int k = 0; k <= kmax; k++) {
     dbg_print_node(best);
     //Check termination conditions
     if (state->samples >= opt->max) return;
-    if (opt->optimum - best->value < opt->epsilon) return;
+    if (opt->fn_optimum - best->value < opt->epsilon) return;
   }
 }
 
@@ -116,17 +121,33 @@ if (h < s->capacity) {
 } /* depth_best_node() */
 
 
+double state_best_value(
+  const struct cl_state *state
+)
+{
+struct node *n = space_best_node(&state->space);
+if (n != NULL) {
+  return n->value;
+} else {
+  return -INFINITY;
+}
+
+} /* space_best_value() */
+
+
 double state_error(
   const struct cl_state *state
 )
 {
 const struct clogo_options *opt = state->opt;
+
+if (opt->fn_optimum == INFINITY) return INFINITY;
 struct node *space_best = space_best_node(&state->space);
 double error;
-if (opt->optimum == 0.0) {
-  error = opt->optimum-space_best->value;
+if (opt->fn_optimum == 0.0) {
+  error = opt->fn_optimum-space_best->value;
 } else {
-  error = opt->optimum - space_best->value/opt->optimum;
+  error = (opt->fn_optimum-space_best->value)/opt->fn_optimum;
 }
 return error;
 
@@ -177,6 +198,8 @@ state->opt = opt;
 
 //Reset sample count
 state->samples = 0;
+state->last_best_value = -INFINITY;
+state->w = opt->init_w;
 
 //Create input space and create topmost node
 init_space(&state->space);
