@@ -27,19 +27,31 @@ void clogo_test(
                            //optimization
 )
 {
-  //Set up initial state
+  //Set up and initialize the state to use for the entirety 
+  //of the optimization.
   struct cl_state state;
   init_state(&state, opt);
 
+  //Then, as long as the termination conditions aren't met,
+  //continue expanding promising nodes.
   while (state.samples < opt->max && 
          state_error(&state) >= opt->epsilon) {
+
+    //Select and expand nodes
     select_nodes(&state);
+
+    //TEMPORARY: display the current best node.
     printf("  Best: ");
     struct node *best = space_best_node(&state.space);
     dbg_print_node(best);
+
     //Recalculate w according to the provided schedule
+    //function.
     state.w = (*opt->w_schedule)(&state);
-    //Updated the best value seen so far
+
+    //Updated the best value seen so far-- this is 
+    //currently only needed to inform the next iteration
+    //of the w schedule.
     state.last_best_value = best->value;
   }
   printf("Final Best (n=%d): ", state.samples);

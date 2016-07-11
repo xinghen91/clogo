@@ -40,9 +40,9 @@ double rosenbrock_2(
   double x = i[0], y = i[1];
   double min = -5.0;
   double max = 10.0;
-  x = min + x*(max-min);
-  y = min + y*(max-min);
-  return -(100.0*pow(y-x*x, 2.0)+pow(x*x-1.0, 2.0));
+  x = min + x * (max - min);
+  y = min + y * (max - min);
+  return -(100.0 * pow(y - x * x, 2.0) + pow(x * x - 1.0, 2.0));
 } /* rosenbrock_2() */
 
 /***********************************************************
@@ -54,7 +54,7 @@ double sin_helper(
   double x
 )
 {
-  return (sin(13.0*x)*sin(27.0*x)+1.0)/2;
+  return (sin(13.0 * x)*sin(27.0 * x) + 1.0) / 2;
 } /* sin_helper() */
 
 /***********************************************************
@@ -67,7 +67,7 @@ double sin_2(
 )
 {
   double x = i[0], y = i[1];
-  return sin_helper(x)*sin_helper(y);
+  return sin_helper(x) * sin_helper(y);
 } /* sin_2() */
 
 /***********************************************************
@@ -127,7 +127,8 @@ int logo_schedule(
 ***********************************************************/
 int soo_schedule(const struct cl_state *state)
 {
-  (void)state;
+  (void)state; //Don't need to use the parameter if we 
+               //always return the same value.
   return 1;
 } /* soo_schedule() */
 
