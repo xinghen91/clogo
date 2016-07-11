@@ -13,8 +13,6 @@
 *********************************************************************/
 //Fancy deferring macro for fancy preprocessor junk
 #define CAT(a, ...) a ## __VA_ARGS__
-#define EMPTY()
-#define DEFER(a) a EMPTY()
 #define _FN_MAX(x) CAT(MAX__, x)
 #define FN_MAX _FN_MAX(FN)
 
