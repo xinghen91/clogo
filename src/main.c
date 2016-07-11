@@ -11,13 +11,19 @@
 /*********************************************************************
 * CONSTANTS
 *********************************************************************/
-//Maximum values of functions provided in this module
-#define ROSENBROCK_MAX (0.0)
-#define SIN_MAX (0.9517936893872353)
+//Fancy deferring macro for fancy preprocessor junk
+#define CAT(a, ...) a ## __VA_ARGS__
+#define EMPTY()
+#define DEFER(a) a EMPTY()
+#define _FN_MAX(x) CAT(MAX__, x)
+#define FN_MAX _FN_MAX(FN)
 
-//Function to test and its corresponding maximum value
-#define FN (&rosenbrock_2)
-#define OPT (ROSENBROCK_MAX)
+//Maximum values of functions provided in this module
+#define MAX__rosenbrock_2 (0.0)
+#define MAX__sin_2 (0.9517936893872353)
+
+//Function to test
+#define FN rosenbrock_2
 
 
 /*********************************************************************
@@ -40,7 +46,6 @@ double rosenbrock_2(
   y = min + y*(max-min);
   return -(100.0*pow(y-x*x, 2.0)+pow(x*x-1.0, 2.0));
 } /* rosenbrock_2() */
-
 
 /***********************************************************
 * sin_helper
@@ -67,7 +72,6 @@ double sin_2(
   return sin_helper(x)*sin_helper(y);
 } /* sin_2() */
 
-
 /***********************************************************
 * hmax
 *
@@ -80,7 +84,6 @@ double hmax(
 {
   return sqrt((double)n);
 } /* hmax() */
-
 
 /***********************************************************
 * logo_schedule
@@ -119,7 +122,6 @@ int logo_schedule(
   return w[k];
 } /* logo_schedule() */
 
-
 /***********************************************************
 * soo_schedule
 *
@@ -131,7 +133,6 @@ int soo_schedule(const struct cl_state *state)
   return 1;
 } /* soo_schedule() */
 
-
 /***********************************************************
 * test_soo
 *
@@ -142,12 +143,12 @@ void test_soo()
   struct clogo_options opt = { 
     .max = 4000,
     .k = 3,
-    .fn = FN,
+    .fn = &FN,
     .hmax = &hmax,
     .w_schedule = soo_schedule,
     .init_w = 1,
     .epsilon = 1e-4,
-    .fn_optimum = OPT,
+    .fn_optimum = FN_MAX,
   };
   clogo_test(&opt);
 } /* test_soo() */
@@ -162,12 +163,12 @@ void test_logo()
   struct clogo_options opt = { 
     .max = 4000,
     .k = 3,
-    .fn = FN,
+    .fn = &FN,
     .hmax = &hmax,
     .w_schedule = logo_schedule,
     .init_w = 3,
     .epsilon = 1e-4,
-    .fn_optimum = OPT,
+    .fn_optimum = FN_MAX,
   };
   clogo_test(&opt);
 } /* test_logo() */
@@ -180,4 +181,4 @@ int main()
   test_soo();
   test_logo();
   return 0;
-}
+} /* main() */
