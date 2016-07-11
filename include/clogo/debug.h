@@ -1,7 +1,38 @@
 #pragma once
 
+/*********************************************************************
+* INCLUDES
+*********************************************************************/
 #include "clogo/clogo.h"
 
-void dbg_print_node(struct node *n);
-void dbg_print_node_list(struct node_list *l);
-void dbg_print_space(struct space *s);
+
+/*********************************************************************
+* FUNCTION PROTOTYPES
+*********************************************************************/
+
+/***********************************************************
+* dbg_print_node
+*
+* Displays the contents of a node structure.
+***********************************************************/
+void dbg_print_node(
+  struct node *n
+);
+
+/***********************************************************
+* dbg_print_node_list
+*
+* Displays the contents of each node in a node list.
+***********************************************************/
+void dbg_print_node_list(
+  struct node_list *l
+);
+
+/***********************************************************
+* dbg_print_space
+*
+* Displays the contents of an input space.
+***********************************************************/
+void dbg_print_space(
+  struct space *s
+);
