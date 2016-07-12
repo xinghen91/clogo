@@ -70,33 +70,74 @@ void select_nodes(
                            //ess
 )
 {
+  //Convenience alias for the optimization options.
   const struct clogo_options *opt = state->opt;
+  //Convenience alias for the input space.
   struct space *space = &state->space;
+  //The best value of a node up until the current point.
   double prev_best = -INFINITY;
+  //Maximum value of `k` for this iteration. Note that this
+  //is calculated based on the provided hmax function (which
+  //calculates the maximum depth to reach) and the current
+  //'depth width' (`w`) of the search. This way the max 
+  //depth is never violated.
   int kmax = (int)((*opt->hmax)(state->samples)/state->w);
 
+  //TEMPORARY: Debug output to display that variables are
+  //being calculated correctly.
   printf("Selecting (n=%d, w=%d, kmax=%d):\n", state->samples, state->w, kmax);
+
+  //Loop through each set of `w` depths.
   for (int k = 0; k <= kmax; k++) {
+    //Best node observed so far in this set of depths.
     struct node *best = NULL;
+    //Minimum/maximum depth included in this set.
     int h_min = k*state->w;
     int h_max = (k+1)*state->w-1;
+    //For each depth level in the set of depths being 
+    //considered...
     for (int h = h_min; h <= h_max; h++) {
+      //Find the best node at this depth.
       struct node *h_best = depth_best_node(space, h);
+
+      //Update the best node pointer if the best node
+      //at our current level is better than the best
+      //node found in the set so far.
       if (h_best == NULL) continue;
       if (best == NULL || h_best->value > best->value) {
         best = h_best; 
       }
     }
+
+    //If the best node in this depth set is better than
+    //every node in the depth sets ABOVE this one, expand
+    //it!
     if (best != NULL && best->value > prev_best) {
+      //Update the best-observed-so-far value so that future
+      //expansions are correct.
       prev_best = best->value;
+
+      //TEMPORARY: Just a debug display to show the size of 
+      //the depth sets, the depth level of the nodes 
+      //selected for expansion, and the node itself.
       if (h_min != h_max) {
         printf("  Depth %d-%d (%d): ", h_min, h_max, best->depth);
       } else {
         printf("  Depth %d: ", best->depth);
       }
-      expand_and_remove_node(best, state);
       dbg_print_node(best);
-      //Check termination conditions
+
+      //Expand the node-- this also increases the sample
+      //count.
+      expand_and_remove_node(best, state);
+
+      //Check termination conditions-- if either is 
+      //violated, stop the selection at this point so that
+      //no further work is done.
+      //Since the program state is always kept in a 'good'
+      //state, there's no need for cleanup or final 
+      //processing-- we can just stop whenever we want and
+      //examine the results later.
       if (state->samples >= opt->max) return;
       if (opt->fn_optimum - best->value < opt->epsilon) return;
     }
@@ -113,9 +154,14 @@ struct node * list_best_node(
                            //node list to examine
 )
 {
+  //Current node being examined-- start at the beginning of
+  //the list.
   struct node *n = l->first;
+  //Best node observed so far.
   struct node *best = n;
-
+  
+  //As long as we're not at the end of the list, update
+  //the best node observed so far.
   while (n != NULL) {
     if (n->value > best->value) {
       best = n;
@@ -123,7 +169,7 @@ struct node * list_best_node(
     n = n->next;
   }
 
-  return best;
+  return best; //...and return it!
 } /* list_best_node() */
 
 /***********************************************************
@@ -135,14 +181,18 @@ struct node * space_best_node(
   const struct space *s    //space to examine
 )
 {
+  //Best node observed so far.
   struct node *best = NULL;
+
+  //Find the best node at each depth in the space and use it
+  //to update the best node we've seen so far.
   for (int h = 0; h < s->capacity; h++) {
     struct node *b = depth_best_node(s, h);  
     if (b == NULL) continue;
     if (best == NULL || b->value > best->value) best = b;
   }
 
-  return best;
+  return best; //...and return it.
 } /* space_best_node() */
 
 /***********************************************************
@@ -150,7 +200,7 @@ struct node * space_best_node(
 *
 * Returns:
 *   * The best node in the given partitioned space
-*     at the specified depth of the node heirarchy.
+*     at the specified depth of the node hierarchy.
 *   * NULL if no nodes exist at that depth.
 ***********************************************************/
 struct node * depth_best_node(
@@ -161,6 +211,9 @@ struct node * depth_best_node(
   if (h < s->capacity) {
     return list_best_node(&s->depth[h]);
   } else {
+    //If the depth being requested is outside of the current
+    //capacity of the space, just return NULL-- no nodes
+    //exist there anyway.
     return NULL;
   }
 } /* depth_best_node() */
@@ -195,10 +248,20 @@ double state_error(
                            //system state
 )
 {
+  //Convenience alias for the optimization options.
   const struct clogo_options *opt = state->opt;
 
+  //If we don't know what the optimum value is, we can't
+  //calculate the error-- so just return maximum error.
   if (opt->fn_optimum == INFINITY) return INFINITY;
+
+  //Find the best node in the space currently...
   struct node *space_best = space_best_node(&state->space);
+
+  //...and calculate its error as described on p172 of the
+  //paper.
+  //NOTE: This should probably be changed in the future. 
+  //It's just here for fair comparisons.
   double error;
   if (opt->fn_optimum == 0.0) {
     error = opt->fn_optimum-space_best->value;
@@ -206,7 +269,6 @@ double state_error(
     error = (opt->fn_optimum-space_best->value)/opt->fn_optimum;
   }
   return error;
-
 } /* space_error() */
 
 /***********************************************************
@@ -218,21 +280,43 @@ double state_error(
 * Also deletes the node being expanded.
 ***********************************************************/
 void expand_and_remove_node(
-  struct node *n,          //node to exppand
+  struct node *n,          //node to expand
   struct cl_state *state   //system state
 )
 {
+  //Convenience aliases
   struct space *space = &state->space;
   const struct clogo_options *opt = state->opt;
+
+  //First, yank the node being expanded out of the input 
+  //space.
   remove_node_from_space(n, space);
+
+  //Choose the dimension to split along. 
+  //This is supposed to be the dimension with largest size 
+  //in the parent cell but since the cells are all uniformly 
+  //sized this approach (cycling through the dimensions as 
+  //depth decreases) accomplishes the same thing and is 
+  //easier.
   int split_dim = n->depth%DIM;
 
+  //Ensure that there's an odd number of splits so the 
+  //middle node can inherint the parent's value without
+  //needing to do an extra function call.
   assert(opt->k % 2 == 1);
-  for (int i = 0; i < opt->k && state->samples < opt->max; i++) {
+  for (int i = 0; i < opt->k; i++) {
     struct node *child = create_child_node(n, state, split_dim, i);
     add_node_to_space(child, space);
+    //Jump out if the termination conditions have been met--
+    //this technically leaves a 'hole' in the input space
+    //that would make it impossible to continue, but we know
+    //we're about to finish anyway so it's fine.
+    if (state->samples >= opt->max) break;
+    //TODO: add `valid` flag to state.
+    //TODO: Check that the other term. cond. isn't violated
   }
 
+  //Finally, delete the expanded and removed node.
   free(n);
 } /* expand_and_remove_node() */
 
@@ -258,6 +342,8 @@ void init_space(
   struct space *s          //space to initialize
 )
 {
+  //NOTE: Maybe we should start with a higher initial capac-
+  //ity, but it actually doesn't matter.
   s->capacity = 1;
   s->depth = malloc(sizeof(*s->depth)*s->capacity);
   for (int i = 0; i < s->capacity; i++) {
@@ -278,11 +364,11 @@ void init_state(
   state->last_best_value = -INFINITY;
   state->w = opt->init_w;
 
-  //Create input space and create topmost node
+  //Create empty input space and populate it with a topmost 
+  //node
   init_space(&state->space);
   struct node *top = create_top_node(opt);
   add_node_to_space(top, &state->space);
-
 } /* init_state() */
 
 /***********************************************************
@@ -300,6 +386,8 @@ struct node * create_top_node(
 {
   struct node *n = malloc(sizeof(*n));
 
+  //Topmost node has all edges at 0 (minimum) all sizes of 
+  //1 (maximum).
   for (int i = 0; i < DIM; i++) {
     n->edges[i] = 0.0;
     n->sizes[i] = 1.0;
@@ -307,7 +395,10 @@ struct node * create_top_node(
 
   n->depth = 0;
   n->next = NULL;
-  sample_node(n, opt);
+
+  //Now that we know where the node is, calculate its value.
+  //TODO: This needs to increment the sample count!
+  sample_node(n, opt); 
 
   return n;
 } /* create_top_node() */
@@ -315,7 +406,7 @@ struct node * create_top_node(
 /***********************************************************
 * create_child_node
 *
-* Create and return a single child node based decended from 
+* Create and return a single child node based descended from 
 * a parent.
 ***********************************************************/
 struct node * create_child_node(
@@ -328,32 +419,46 @@ struct node * create_child_node(
                            //created
 )
 {
+  //Convenience options structure alias.
   const struct clogo_options *opt = state->opt;
+  //`k` value -- Number of children per split.
   int splits = opt->k;
-  struct node *n = malloc(sizeof(*n));
+  //Calculate the width of the dimension to shrink along.
   double width = parent->sizes[split_dim] / splits;
+  //...and allocate space for the new node.
+  struct node *n = malloc(sizeof(*n));
 
+  //Each edge will be identical to the parents' edges, other
+  //than that along the split dimension.
   for (int i = 0; i < DIM; i++) {
     double edge = parent->edges[i];
     if (i == split_dim) edge += width * idx;
     n->edges[i] = edge;
   }
 
+  //Each size will be identical to the parents', except that
+  //along the split dimension.
+  //TODO: Just move the width calculation in here, similar
+  //to the edge calculation.
   for (int i = 0; i < DIM; i++) {
     n->sizes[i] = (i == split_dim) ? width : parent->sizes[i];
   }
 
-  n->depth = parent->depth+1;
+  //Child nodes are one depth deeper than their parent.
+  n->depth = parent->depth + 1;
   n->next = NULL;
 
-  if (idx == opt->k/2) {
+  //If this is the middle node, its center is identical to
+  //the parent's center-- so just steal the parent's value!
+  //Otherwise, sample.
+  if (idx == opt->k / 2) {
     n->value = parent->value;
   } else {
     sample_node(n, opt);
     state->samples++;
   }
 
-  return n;
+  return n; //Return the fully-created child node.
 } /* create_child_node() */
 
 /***********************************************************
@@ -381,8 +486,12 @@ void add_node_to_space(
   struct space *s          //space to contain the node
 )
 {
+  //Make sure our space is deep enough to hold the node.
   while (s->capacity <= n->depth) grow_space(s);
+  //Find the list that represents all nodes at that depth
+  //in the space...
   struct node_list *list = &s->depth[n->depth];
+  //...and add the node to it!
   add_node_to_list(n, list);
 } /* add_node_to_space() */
 
@@ -397,10 +506,13 @@ void remove_node_from_list(
   struct node_list *l      //list to modify
 )
 {
+  //Since each node is part of a singly-linked list, we
+  //have to keep track of the previous and current nodes
+  //so we can hook them up correctly once we remove one.
   struct node *prev = NULL;
-  struct node *next = l->first;
-  while (next != NULL) {
-    if (next == n) {
+  struct node *current = l->first;
+  while (current != NULL) {
+    if (current == n) {
      if (prev != NULL) {
         prev->next = n->next;
      } else {
@@ -409,11 +521,11 @@ void remove_node_from_list(
      //We removed the node, so jump out.
      return;
     }
-    prev = next;
-    next = next->next;
+    prev = current;
+    current = current->next;
   }
 
-  //We didn't find the node to remove!
+  //We didn't find the node to remove! Panic!
   assert(false);
 } /* remove_node_from_list() */
 
@@ -428,8 +540,13 @@ void remove_node_from_space(
   struct space *s          //space to modify
 )
 {
+  //Make sure the node we're removing can possibly exist
+  //in the current partitioned input space.
   assert(n->depth < s->capacity);
+
+  //Find the list at the correct depth...
   struct node_list *l = &s->depth[n->depth];
+  //...and remove the requested node from it.
   remove_node_from_list(n, l);
 } /* remove_node_from_space() */
 
@@ -442,14 +559,21 @@ void grow_space(
   struct space *s          //space to expand
 )
 {
+  //Let's double capacity with each size increase, sure.
   int new_capacity = s->capacity*2;
   struct node_list *new_lists = malloc(sizeof(*new_lists)*new_capacity);
+
+  //Copy over node lists from the previous depth lists, and 
+  //initialize anythat didn't used to exist to empty.
   for (int i = 0; i < s->capacity; i++) {
     new_lists[i] = s->depth[i];
   }
   for (int i = s->capacity; i < new_capacity; i++) {
     init_node_list(&new_lists[i]);
   }
+
+  //Delete the old depth lists, and point the space towards
+  //the new, bigger one.
   free(s->depth);
   s->depth = new_lists;
   s->capacity = new_capacity;
@@ -473,7 +597,6 @@ void sample_node(
   calculate_center(n, center);
   n->value = (*opt->fn)(center);
 } /* sample_node() */
-
 
 /***********************************************************
 * calculate_center

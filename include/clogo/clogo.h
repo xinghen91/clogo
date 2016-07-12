@@ -50,7 +50,7 @@ struct node {
   double edges[DIM];       //edge of cell in each dimension
   double sizes[DIM];       //size of cell ...
   double value;            //sampled value at the center
-  int depth;               //depth in heirarchy
+  int depth;               //depth in hierarchy
   struct node *next;       //intrusive linked list pointer
 };
 
@@ -149,7 +149,7 @@ struct node * space_best_node(
 *
 * Returns:
 *   * The best node in the given partitioned space
-*     at the specified depth of the node heirarchy.
+*     at the specified depth of the node hierarchy.
 *   * NULL if no nodes exist at that depth.
 ***********************************************************/
 struct node * depth_best_node(
@@ -188,7 +188,7 @@ double state_error(
 * Also deletes the node being expanded.
 ***********************************************************/
 void expand_and_remove_node(
-  struct node *n,          //node to exppand
+  struct node *n,          //node to expand
   struct cl_state *state   //system state
 );
 
@@ -240,7 +240,7 @@ struct node * create_top_node(
 /***********************************************************
 * create_child_node
 *
-* Create and return a single child node based decended from 
+* Create and return a single child node based descended from 
 * a parent.
 ***********************************************************/
 struct node * create_child_node(
