@@ -1,14 +1,14 @@
 /*********************************************************************
 * INCLUDES
 *********************************************************************/
-#include "clogo/clogo.h"
+#include "clogo/clogo_private.h"
 #include "clogo/debug.h"
 
 #include <assert.h>
+#include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
-#include <math.h>
 
 
 /*********************************************************************
@@ -57,6 +57,25 @@ struct clogo_result clogo_optimize(
   }
   return make_result(&state);
 } /* clogo_test() */
+
+/***********************************************************
+* state_best_value
+*
+* Returns the best value of any node at the current state
+* of the optimization.
+***********************************************************/
+double state_best_value(
+  const struct cl_state *state
+                           //system state
+)
+{
+  struct node *n = space_best_node(&state->space);
+  if (n != NULL) {
+    return n->value;
+  } else {
+    return -INFINITY;
+  }
+} /* space_best_value() */
 
 /***********************************************************
 * make_result
@@ -238,25 +257,6 @@ struct node * depth_best_node(
     return NULL;
   }
 } /* depth_best_node() */
-
-/***********************************************************
-* state_best_value
-*
-* Returns the best value of any node at the current state
-* of the optimization.
-***********************************************************/
-double state_best_value(
-  const struct cl_state *state
-                           //system state
-)
-{
-  struct node *n = space_best_node(&state->space);
-  if (n != NULL) {
-    return n->value;
-  } else {
-    return -INFINITY;
-  }
-} /* space_best_value() */
 
 /***********************************************************
 * state_error

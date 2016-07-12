@@ -2,6 +2,7 @@
 * INCLUDES
 *********************************************************************/
 #include "clogo/debug.h"
+#include "clogo/clogo_private.h"
 
 #include <stdio.h>
 
