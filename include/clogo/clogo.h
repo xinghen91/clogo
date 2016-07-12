@@ -32,6 +32,18 @@ struct clogo_options {
 };
 
 /***********************************************************
+* clogo_result
+*
+* Structure that represents the result of a clogo 
+* optimization.
+***********************************************************/
+struct clogo_result {
+  double point[DIM];       //point of max value found
+  double value;            //max value found
+  int samples;             //number of samples observed
+};
+
+/***********************************************************
 * node
 *
 * A sampled value in the space.
@@ -103,15 +115,25 @@ struct cl_state {
 *********************************************************************/
 
 /***********************************************************
-* clogo_test
+* clogo_optimize
 *
 * Current main interface to the clogo optimizer. Executes a 
 * complete optimization process.
 ***********************************************************/
-void clogo_test(
+struct clogo_result clogo_optimize(
   const struct clogo_options *opt
                            //options describing the desired
                            //optimization
+);
+
+/***********************************************************
+* make_result
+*
+* Build a result structure corresponding with the given
+* optimization state.
+***********************************************************/
+struct clogo_result make_result(
+  const struct cl_state *state
 );
 
 /***********************************************************

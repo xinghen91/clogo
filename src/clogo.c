@@ -16,12 +16,12 @@
 *********************************************************************/
 
 /***********************************************************
-* clogo_test
+* clogo_optimize
 *
 * Current main interface to the clogo optimizer. Executes a 
 * complete optimization process.
 ***********************************************************/
-void clogo_test(
+struct clogo_result clogo_optimize(
   const struct clogo_options *opt
                            //options describing the desired
                            //optimization
@@ -36,14 +36,8 @@ void clogo_test(
   //continue expanding promising nodes.
   while (state.samples < opt->max && 
          state_error(&state) >= opt->epsilon) {
-
     //Select and expand nodes
     select_nodes(&state);
-
-    //TEMPORARY: display the current best node.
-    printf("  Best: ");
-    struct node *best = space_best_node(&state.space);
-    dbg_print_node(best);
 
     //Recalculate w according to the provided schedule
     //function.
@@ -52,12 +46,35 @@ void clogo_test(
     //Updated the best value seen so far-- this is 
     //currently only needed to inform the next iteration
     //of the w schedule.
+    struct node *best = space_best_node(&state.space);
     state.last_best_value = best->value;
+    
+#ifdef DEBUG
+    //Display the current best node for debug purposes
+    printf("  Best: ");
+    dbg_print_node(best);
+#endif
   }
-  printf("Final Best (n=%d): ", state.samples);
-  dbg_print_node(space_best_node(&state.space));
-  printf("Error: %e\n", state_error(&state));
+  return make_result(&state);
 } /* clogo_test() */
+
+/***********************************************************
+* make_result
+*
+* Build a result structure corresponding with the given
+* optimization state.
+***********************************************************/
+struct clogo_result make_result(
+  const struct cl_state *state
+)
+{
+  struct clogo_result result;
+  struct node *best = space_best_node(&state->space);
+  calculate_center(best, result.point);
+  result.value = best->value;
+  result.samples = state->samples;
+  return result;
+} /* make_result() */
 
 /***********************************************************
 * select_nodes
@@ -83,9 +100,11 @@ void select_nodes(
   //depth is never violated.
   int kmax = (int)((*opt->hmax)(state->samples)/state->w);
 
-  //TEMPORARY: Debug output to display that variables are
-  //being calculated correctly.
+#ifdef DEBUG
+  //Debug output to display that variables are being 
+  //calculated correctly.
   printf("Selecting (n=%d, w=%d, kmax=%d):\n", state->samples, state->w, kmax);
+#endif
 
   //Loop through each set of `w` depths.
   for (int k = 0; k <= kmax; k++) {
@@ -117,15 +136,17 @@ void select_nodes(
       //expansions are correct.
       prev_best = best->value;
 
-      //TEMPORARY: Just a debug display to show the size of 
-      //the depth sets, the depth level of the nodes 
-      //selected for expansion, and the node itself.
+#ifdef DEBUG
+      //Just a debug display to show the size of the depth 
+      //sets, the depth level of the nodes selected for 
+      //expansion, and the node itself.
       if (h_min != h_max) {
         printf("  Depth %d-%d (%d): ", h_min, h_max, best->depth);
       } else {
         printf("  Depth %d: ", best->depth);
       }
       dbg_print_node(best);
+#endif
 
       //Expand the node-- this also increases the sample
       //count.

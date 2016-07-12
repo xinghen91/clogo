@@ -133,11 +133,25 @@ int soo_schedule(const struct cl_state *state)
 } /* soo_schedule() */
 
 /***********************************************************
+* display_result
+*
+* Print out debug info about a result structure.
+***********************************************************/
+void display_result(
+  struct clogo_result *result
+)
+{
+  printf("samples: %d\t error: %e\t point: %f/%f\n",
+         result->samples, FN_MAX - result->value,
+         result->point[0], result->point[1]);
+} /* display_result() */
+
+/***********************************************************
 * test_soo
 *
 * Run the optimization using SOO-like settings.
 ***********************************************************/
-void test_soo()
+struct clogo_options test_soo()
 {
   struct clogo_options opt = { 
     .max = 4000,
@@ -149,7 +163,7 @@ void test_soo()
     .epsilon = 1e-4,
     .fn_optimum = FN_MAX,
   };
-  clogo_test(&opt);
+  return opt;
 } /* test_soo() */
 
 /***********************************************************
@@ -157,7 +171,7 @@ void test_soo()
 *
 * Run the optimization using LOGO-like settings.
 ***********************************************************/
-void test_logo()
+struct clogo_options test_logo()
 {
   struct clogo_options opt = { 
     .max = 4000,
@@ -169,7 +183,7 @@ void test_logo()
     .epsilon = 1e-4,
     .fn_optimum = FN_MAX,
   };
-  clogo_test(&opt);
+  return opt;
 } /* test_logo() */
 
 /***********************************************************
@@ -177,7 +191,8 @@ void test_logo()
 ***********************************************************/
 int main() 
 {
-  test_soo();
-  test_logo();
+  struct clogo_options opt = test_soo();
+  struct clogo_result result = clogo_optimize(&opt);
+  display_result(&result);
   return 0;
 } /* main() */
