@@ -10,24 +10,92 @@
 *********************************************************************/
 
 /***********************************************************
-* make_result
-*
-* Build a result structure corresponding with the given
-* optimization state.
-***********************************************************/
-struct clogo_result make_result(
-  const struct cl_state *state
-);
-
-/***********************************************************
 * select_nodes
 *
 * Iterates through each depth of the partitioned input space
 * and expands the appropriate nodes.
 ***********************************************************/
 void select_nodes(
-  struct cl_state *state   //state of the optimization proc-
+  struct clogo_state *state//state of the optimization proc-
                            //ess
+);
+
+/***********************************************************
+* make_result
+*
+* Build a result structure corresponding with the given
+* optimization state.
+***********************************************************/
+struct clogo_result make_result(
+  const struct clogo_state *state
+);
+
+/***********************************************************
+* state_error
+*
+* Returns the error of the given state based on the best
+* function value provided in the options structure.
+***********************************************************/
+double state_error(
+  const struct clogo_state *state
+                           //system state
+);
+
+/***********************************************************
+* sample_node
+*
+* Fills out the given node structure with its appropriate
+* function value. This is the only place the function in
+* the options structure should be evaluated.
+***********************************************************/
+void sample_node(
+  struct node *n,          //node to modify
+  const struct clogo_options *opt
+                           //options that define the optimi-
+                           //zation
+);
+
+/***********************************************************
+* expand_and_remove_node
+*
+* Expands the referenced node, adding its children to the
+* next depth level of the input space and removing it from
+* its current level.
+* Also deletes the node being expanded.
+***********************************************************/
+void expand_and_remove_node(
+  struct node *n,          //node to expand
+  struct clogo_state *state//system state
+);
+
+/***********************************************************
+* create_child_node
+*
+* Create and return a single child node based descended from 
+* a parent.
+***********************************************************/
+struct node * create_child_node(
+  const struct node *parent, 
+                           //parent of returned node
+  struct clogo_state *state,  
+                           //current state to modify
+  int split_dim,           //index of the dimension to split
+                           //on
+  int idx                  //index of the current node being
+                           //created
+);
+
+/***********************************************************
+* create_top_node
+*
+* Create and return a topmost node to place in an input -
+* space. This needs a special function because all other 
+* nodes are created based on a parent node.
+***********************************************************/
+struct node * create_top_node(
+  const struct clogo_options *opt
+                           //options that define the optimi-
+                           //zation
 );
 
 /***********************************************************
@@ -63,30 +131,6 @@ struct node * depth_best_node(
 );
 
 /***********************************************************
-* state_error
-*
-* Returns the error of the given state based on the best
-* function value provided in the options structure.
-***********************************************************/
-double state_error(
-  const struct cl_state *state
-                           //system state
-);
-
-/***********************************************************
-* expand_and_remove_node
-*
-* Expands the referenced node, adding its children to the
-* next depth level of the input space and removing it from
-* its current level.
-* Also deletes the node being expanded.
-***********************************************************/
-void expand_and_remove_node(
-  struct node *n,          //node to expand
-  struct cl_state *state   //system state
-);
-
-/***********************************************************
 * init_space
 *
 * Initialize the given input space structure to an empty 
@@ -104,49 +148,6 @@ void init_space(
 void init_node_list(
   struct node_list *l      //list to initialize
 );
-
-/***********************************************************
-* init_state
-*
-* Initialize a given optimization state structure to an
-* appropriate state to begin the process.
-***********************************************************/
-void init_state(
-  struct cl_state *state,  //state to initialize
-  const struct clogo_options *opt
-                           //options that define the optimi-
-                           //zation
-);
-
-/***********************************************************
-* create_top_node
-*
-* Create and return a topmost node to place in an input -
-* space. This needs a special function because all other 
-* nodes are created based on a parent node.
-***********************************************************/
-struct node * create_top_node(
-  const struct clogo_options *opt
-                           //options that define the optimi-
-                           //zation
-);
-
-/***********************************************************
-* create_child_node
-*
-* Create and return a single child node based descended from 
-* a parent.
-***********************************************************/
-struct node * create_child_node(
-  const struct node *parent, 
-                           //parent of returned node
-  struct cl_state *state,  //current state to modify
-  int split_dim,           //index of the dimension to split
-                           //on
-  int idx                  //index of the current node being
-                           //created
-);
-
 
 /***********************************************************
 * add_node_to_list
@@ -198,20 +199,6 @@ void remove_node_from_space(
 ***********************************************************/
 void grow_space(
   struct space *s          //space to expand
-);
-
-/***********************************************************
-* sample_node
-*
-* Fills out the given node structure with its appropriate
-* function value. This is the only place the function in
-* the options structure should be evaluated.
-***********************************************************/
-void sample_node(
-  struct node *n,          //node to modify
-  const struct clogo_options *opt
-                           //options that define the optimi-
-                           //zation
 );
 
 /***********************************************************

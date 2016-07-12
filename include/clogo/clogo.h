@@ -1,6 +1,11 @@
 #pragma once
 
 /*********************************************************************
+* INCLUDES
+*********************************************************************/
+#include <stdbool.h>
+
+/*********************************************************************
 * CONSTANTS
 *********************************************************************/
 #define DIM 2
@@ -10,7 +15,7 @@
 * TYPES
 *********************************************************************/
 //Forward-declared types
-struct cl_state;
+struct clogo_state;
 
 /***********************************************************
 * clogo_options
@@ -23,7 +28,7 @@ struct clogo_options {
   int k;                   //number of splits per cell
   double (*fn)(double *);  //function to evaluate
   double (*hmax)(int);     //depth limit function
-  int (*w_schedule)(const struct cl_state *);
+  int (*w_schedule)(const struct clogo_state *);
                            //w schedule function
   int init_w;              //w value at iteration 0
   double epsilon;          //max error before stopping
@@ -93,12 +98,12 @@ struct space {
 };
 
 /***********************************************************
-* cl_state
+* clogo_state
 *
 * Complete state of the clogo optimization process. Used
 * as an input to the w_schedule function.
 ***********************************************************/
-struct cl_state {
+struct clogo_state {
   const struct clogo_options *opt;
                            //options that define the optimi-
                            //zation process
@@ -127,12 +132,53 @@ struct clogo_result clogo_optimize(
 );
 
 /***********************************************************
+* clogo_init
+*
+* Initialize and return a optimization state structure to an
+* appropriate state to begin the process.
+***********************************************************/
+struct clogo_state clogo_init(
+  const struct clogo_options *opt
+                           //options that define the optimi-
+                           //zation
+);
+
+/***********************************************************
+* clogo_step
+*
+* Execute one iteration of node expansion. Note that one
+* call to this function may result in multiple samplings of
+* the objective function.
+***********************************************************/
+void clogo_step(
+  struct clogo_state *state//optimization state to use
+);
+
+/***********************************************************
+* clogo_done
+*
+* Returns true if the termination conditions have been met.
+***********************************************************/
+bool clogo_done(
+  struct clogo_state *state//optimization state to check
+);
+
+/***********************************************************
+* clogo_finish
+*
+* Returns a result structure for the optimization state.
+***********************************************************/
+struct clogo_result clogo_finish(
+  struct clogo_state *state//optimization state to examine
+);
+
+/***********************************************************
 * state_best_value
 *
 * Returns the best value of any node at the current state
 * of the optimization.
 ***********************************************************/
 double state_best_value(
-  const struct cl_state *state
+  const struct clogo_state *state
                            //system state
 );

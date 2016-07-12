@@ -89,7 +89,7 @@ double hmax(
 * w schedule for the LOGO algorithm.
 ***********************************************************/
 int logo_schedule(
-  const struct cl_state *state
+  const struct clogo_state *state
 )
 {
   static const int w[] = {3, 4, 5, 6, 8, 30};
@@ -125,7 +125,9 @@ int logo_schedule(
 *
 * w schedule for the SOO algorithm. Always 1.
 ***********************************************************/
-int soo_schedule(const struct cl_state *state)
+int soo_schedule(
+  const struct clogo_state *state
+)
 {
   (void)state; //Don't need to use the parameter if we 
                //always return the same value.
