@@ -194,11 +194,12 @@ struct clogo_options test_logo()
 int main() 
 {
   struct clogo_options opt = test_soo();
-  struct clogo_result result = clogo_optimize(&opt);
-  display_result(&result);
-
-  opt = test_logo();
-  result = clogo_optimize(&opt);
-  display_result(&result);
+  struct clogo_state state = clogo_init(&opt);
+  while (!clogo_done(&state)) {
+    clogo_step(&state);
+    struct clogo_result result = clogo_finish(&state);
+    display_result(&result);
+  }
+  clogo_delete(&state);
   return 0;
 } /* main() */
