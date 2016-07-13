@@ -50,9 +50,7 @@ double state_error(
 ***********************************************************/
 void sample_node(
   struct node *n,          //node to modify
-  const struct clogo_options *opt
-                           //options that define the optimi-
-                           //zation
+  struct clogo_state *state//current optimization state
 );
 
 /***********************************************************
@@ -94,9 +92,7 @@ struct node * create_child_node(
 * nodes are created based on a parent node.
 ***********************************************************/
 struct node * create_top_node(
-  const struct clogo_options *opt
-                           //options that define the optimi-
-                           //zation
+  struct clogo_state *state//optimization state
 );
 
 /***********************************************************

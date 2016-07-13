@@ -112,6 +112,8 @@ struct clogo_state {
   double last_best_value;  //best value observed in the pre-
                            //vious iteration
   int w;                   //current w value
+  bool valid;              //true if the state can be used
+                           //for further optimization steps
 };
 
 

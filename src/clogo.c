@@ -32,8 +32,7 @@ struct clogo_result clogo_optimize(
 
   //Then, as long as the termination conditions aren't met,
   //continue expanding promising nodes.
-  while (state.samples < opt->max && 
-         state_error(&state) >= opt->epsilon) {
+  while (!clogo_done(&state)) {
     clogo_step(&state);
   }
 
@@ -53,20 +52,18 @@ struct clogo_state clogo_init(
   const struct clogo_options *opt
 )
 {
-  struct clogo_state state;
-
-  //Assign options
-  state.opt = opt;
-
-  //Reset sample count
-  state.samples = 0;
-  state.last_best_value = -INFINITY;
-  state.w = opt->init_w;
+  struct clogo_state state = {
+    .opt = opt,
+    .samples = 0,
+    .last_best_value = -INFINITY,
+    .w = opt->init_w,
+    .valid = true
+  };
 
   //Create empty input space and populate it with a topmost 
   //node
   init_space(&state.space);
-  struct node *top = create_top_node(opt);
+  struct node *top = create_top_node(&state);
   add_node_to_space(top, &state.space);
 
   return state;
@@ -83,6 +80,8 @@ void clogo_step(
   struct clogo_state *state
 )
 {
+  assert(state->valid);
+
   //Select and expand nodes
   select_nodes(state);
 
@@ -117,7 +116,7 @@ bool clogo_done(
   //Run out of samples OR
   //Achieved the desired error
   return state->samples >= opt->max ||
-         state_error(state) >= opt->epsilon;
+         state_error(state) <= opt->epsilon;
 } /* clogo_done() */
 
 /***********************************************************
@@ -154,6 +153,7 @@ void clogo_delete(
       node = next;
     }
   }
+
   //Delete the depth list itself
   free(space->depth);
 } /* clogo_delete */
@@ -327,14 +327,13 @@ double state_error(
 ***********************************************************/
 void sample_node(
   struct node *n,          //node to modify
-  const struct clogo_options *opt
-                           //options that define the optimi-
-                           //zation
+  struct clogo_state *state//current optimization state
 )
 {
   double center[DIM];
   calculate_center(n, center);
-  n->value = (*opt->fn)(center);
+  n->value = (*state->opt->fn)(center);
+  state->samples++;
 } /* sample_node() */
 
 /***********************************************************
@@ -382,7 +381,11 @@ double expand_and_remove_node(
     //this technically leaves a 'hole' in the input space
     //that would make it impossible to continue, but we know
     //we're about to finish anyway so it's fine.
-    if (state->samples >= opt->max) break;
+    if (state->samples >= opt->max ||
+        opt->fn_optimum - best < opt->epsilon) {
+      state->valid = false;
+      break;
+    }
     //TODO: add `valid` flag to state.
     //TODO: Check that the other term. cond. isn't violated
   }
@@ -428,8 +431,6 @@ struct node * create_child_node(
 
   //Each size will be identical to the parents', except that
   //along the split dimension.
-  //TODO: Just move the width calculation in here, similar
-  //to the edge calculation.
   for (int i = 0; i < DIM; i++) {
     n->sizes[i] = (i == split_dim) ? width : parent->sizes[i];
   }
@@ -444,8 +445,7 @@ struct node * create_child_node(
   if (idx == opt->k / 2) {
     n->value = parent->value;
   } else {
-    sample_node(n, opt);
-    state->samples++;
+    sample_node(n, state);
   }
 
   return n; //Return the fully-created child node.
@@ -459,9 +459,7 @@ struct node * create_child_node(
 * nodes are created based on a parent node.
 ***********************************************************/
 struct node * create_top_node(
-  const struct clogo_options *opt
-                           //options that define the optimi-
-                           //zation
+  struct clogo_state *state//optimization state
 )
 {
   struct node *n = malloc(sizeof(*n));
@@ -477,8 +475,7 @@ struct node * create_top_node(
   n->next = NULL;
 
   //Now that we know where the node is, calculate its value.
-  //TODO: This needs to increment the sample count!
-  sample_node(n, opt); 
+  sample_node(n, state); 
 
   return n;
 } /* create_top_node() */
