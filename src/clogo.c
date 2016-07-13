@@ -290,6 +290,7 @@ double val_error(
   double val               //value to consider
 )
 {
+#ifdef LOGO_ERROR
   //...and calculate its error as described on p172 of the
   //paper.
   //NOTE: This should probably be changed in the future. 
@@ -301,6 +302,9 @@ double val_error(
     error = (opt->fn_optimum - val) / opt->fn_optimum;
   }
   return error;
+#else
+  return opt->fn_optimum - val;
+#endif
 } /* val_error() */
 
 /***********************************************************
