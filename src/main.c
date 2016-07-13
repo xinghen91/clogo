@@ -196,5 +196,9 @@ int main()
   struct clogo_options opt = test_soo();
   struct clogo_result result = clogo_optimize(&opt);
   display_result(&result);
+
+  opt = test_logo();
+  result = clogo_optimize(&opt);
+  display_result(&result);
   return 0;
 } /* main() */

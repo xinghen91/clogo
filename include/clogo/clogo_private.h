@@ -62,8 +62,9 @@ void sample_node(
 * next depth level of the input space and removing it from
 * its current level.
 * Also deletes the node being expanded.
+* Returns the value of the best child node created.
 ***********************************************************/
-void expand_and_remove_node(
+double expand_and_remove_node(
   struct node *n,          //node to expand
   struct clogo_state *state//system state
 );

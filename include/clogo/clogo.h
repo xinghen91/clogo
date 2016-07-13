@@ -173,6 +173,16 @@ struct clogo_result clogo_finish(
 );
 
 /***********************************************************
+* clogo_delete
+*
+* Fully cleans up the specified state structure.
+* Note that this doesn't delete the options structure.
+***********************************************************/
+void clogo_delete(
+  struct clogo_state *state//state to be deleted
+);
+
+/***********************************************************
 * state_best_value
 *
 * Returns the best value of any node at the current state

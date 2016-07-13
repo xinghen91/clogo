@@ -36,7 +36,11 @@ struct clogo_result clogo_optimize(
          state_error(&state) >= opt->epsilon) {
     clogo_step(&state);
   }
-  return clogo_finish(&state);
+
+  //Save the result before cleaning up the state.
+  struct clogo_result result = clogo_finish(&state);
+  clogo_delete(&state);
+  return result;
 } /* clogo_optimize() */
 
 /***********************************************************
@@ -127,6 +131,32 @@ struct clogo_result clogo_finish(
 {
   return make_result(state);
 } /* clogo_finish() */
+
+/***********************************************************
+* clogo_delete
+*
+* Fully cleans up the specified state structure.
+* Note that this doesn't delete the options structure.
+***********************************************************/
+void clogo_delete(
+  struct clogo_state *state//state to be deleted
+)
+{
+  struct space *space = &state->space;
+
+  //Destructively delete each depth list
+  for (int h = 0; h < space->capacity; h++) {
+    struct node_list *list = &space->depth[h];  
+    struct node *node = list->first;
+    while (node != NULL) {
+      struct node *next = node->next;
+      free(node);
+      node = next;
+    }
+  }
+  //Delete the depth list itself
+  free(space->depth);
+} /* clogo_delete */
 
 /***********************************************************
 * state_best_value
@@ -221,7 +251,7 @@ void select_nodes(
 
       //Expand the node-- this also increases the sample
       //count.
-      expand_and_remove_node(best, state);
+      double child_best = expand_and_remove_node(best, state);
 
       //Check termination conditions-- if either is 
       //violated, stop the selection at this point so that
@@ -231,7 +261,7 @@ void select_nodes(
       //processing-- we can just stop whenever we want and
       //examine the results later.
       if (state->samples >= opt->max) return;
-      if (opt->fn_optimum - best->value < opt->epsilon) return;
+      if (opt->fn_optimum - child_best < opt->epsilon) return;
     }
   }
 } /* select_nodes() */
@@ -314,8 +344,9 @@ void sample_node(
 * next depth level of the input space and removing it from
 * its current level.
 * Also deletes the node being expanded.
+* Returns the value of the best child node created.
 ***********************************************************/
-void expand_and_remove_node(
+double expand_and_remove_node(
   struct node *n,          //node to expand
   struct clogo_state *state   //system state
 )
@@ -323,6 +354,8 @@ void expand_and_remove_node(
   //Convenience aliases
   struct space *space = &state->space;
   const struct clogo_options *opt = state->opt;
+  //Best child value seen so far
+  double best = -INFINITY;
 
   //First, yank the node being expanded out of the input 
   //space.
@@ -343,6 +376,8 @@ void expand_and_remove_node(
   for (int i = 0; i < opt->k; i++) {
     struct node *child = create_child_node(n, state, split_dim, i);
     add_node_to_space(child, space);
+    if (child->value > best) best = child->value;
+
     //Jump out if the termination conditions have been met--
     //this technically leaves a 'hole' in the input space
     //that would make it impossible to continue, but we know
@@ -354,6 +389,8 @@ void expand_and_remove_node(
 
   //Finally, delete the expanded and removed node.
   free(n);
+
+  return best;
 } /* expand_and_remove_node() */
 
 /***********************************************************
