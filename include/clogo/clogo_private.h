@@ -31,6 +31,18 @@ struct clogo_result make_result(
 );
 
 /***********************************************************
+* val_error
+*
+* Calculates and returns the error of a node that has the
+* specified value.
+***********************************************************/
+double val_error(
+  const struct clogo_options *opt,
+                           //problem definition
+  double val               //value to consider
+);
+
+/***********************************************************
 * state_error
 *
 * Returns the error of the given state based on the best
@@ -207,4 +219,19 @@ void grow_space(
 void calculate_center(
   const struct node *n,    //node to consider
   double *center           //output center point array
+);
+
+/***********************************************************
+* term_cond_met
+*
+* Returns true if the termination conditions have been met.
+* If `best` isn't NULL, it points to the assumed best
+* node in the state. Otherwise, the actual value best node
+* in the state is found and used for that calculation.
+***********************************************************/
+bool term_cond_met(
+  const struct clogo_state *state,
+                           //state to examine
+  const double *best_val_p //pointer to best value, if it
+                           //exists
 );

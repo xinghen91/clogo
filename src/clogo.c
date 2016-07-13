@@ -111,12 +111,7 @@ bool clogo_done(
   struct clogo_state *state
 )
 {
-  const struct clogo_options *opt = state->opt;
-  //Return true if we've:
-  //Run out of samples OR
-  //Achieved the desired error
-  return state->samples >= opt->max ||
-         state_error(state) <= opt->epsilon;
+  return term_cond_met(state, NULL);
 } /* clogo_done() */
 
 /***********************************************************
@@ -260,8 +255,7 @@ void select_nodes(
       //state, there's no need for cleanup or final 
       //processing-- we can just stop whenever we want and
       //examine the results later.
-      if (state->samples >= opt->max) return;
-      if (opt->fn_optimum - child_best < opt->epsilon) return;
+      if (term_cond_met(state, &child_best)) return;
     }
   }
 } /* select_nodes() */
@@ -285,6 +279,31 @@ struct clogo_result make_result(
 } /* make_result() */
 
 /***********************************************************
+* val_error
+*
+* Calculates and returns the error of a node that has the
+* specified value.
+***********************************************************/
+double val_error(
+  const struct clogo_options *opt,
+                           //problem definition
+  double val               //value to consider
+)
+{
+  //...and calculate its error as described on p172 of the
+  //paper.
+  //NOTE: This should probably be changed in the future. 
+  //It's just here for fair comparisons.
+  double error;
+  if (opt->fn_optimum == 0.0) {
+    error = opt->fn_optimum - val;
+  } else {
+    error = (opt->fn_optimum - val) / opt->fn_optimum;
+  }
+  return error;
+} /* val_error() */
+
+/***********************************************************
 * state_error
 *
 * Returns the error of the given state based on the best
@@ -304,18 +323,10 @@ double state_error(
 
   //Find the best node in the space currently...
   struct node *space_best = space_best_node(&state->space);
+  assert(space_best != NULL);
+  double best_val = space_best->value;
 
-  //...and calculate its error as described on p172 of the
-  //paper.
-  //NOTE: This should probably be changed in the future. 
-  //It's just here for fair comparisons.
-  double error;
-  if (opt->fn_optimum == 0.0) {
-    error = opt->fn_optimum-space_best->value;
-  } else {
-    error = (opt->fn_optimum-space_best->value)/opt->fn_optimum;
-  }
-  return error;
+  return val_error(opt, best_val);
 } /* state_error() */
 
 /***********************************************************
@@ -381,13 +392,10 @@ double expand_and_remove_node(
     //this technically leaves a 'hole' in the input space
     //that would make it impossible to continue, but we know
     //we're about to finish anyway so it's fine.
-    if (state->samples >= opt->max ||
-        opt->fn_optimum - best < opt->epsilon) {
+    if (term_cond_met(state, &best)) {
       state->valid = false;
       break;
     }
-    //TODO: add `valid` flag to state.
-    //TODO: Check that the other term. cond. isn't violated
   }
 
   //Finally, delete the expanded and removed node.
@@ -718,3 +726,31 @@ void calculate_center(
     center[i] = n->edges[i] + n->sizes[i]/2.0;
   }
 } /* calculate_center() */
+
+/***********************************************************
+* term_cond_met
+*
+* Returns true if the termination conditions have been met.
+* If `best` isn't NULL, it points to the assumed best
+* node in the state. Otherwise, the actual value best node
+* in the state is found and used for that calculation.
+***********************************************************/
+bool term_cond_met(
+  const struct clogo_state *state,
+                           //state to examine
+  const double *best_val_p //pointer to best value, if it
+                           //exists
+)
+{
+  //Convenience alias
+  const struct clogo_options *opt = state->opt;
+
+  //If we were given a best value, use it-- if it's NULL,
+  //calculate the real best value based on the state.
+  double best_val = best_val_p ? *best_val_p : state_best_value(state);
+
+  return (
+    state->samples >= opt->max ||
+    val_error(state->opt, best_val) < opt->epsilon
+  );
+}
